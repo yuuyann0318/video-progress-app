@@ -46,19 +46,74 @@ html, body, [class*="st-"] {
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3 { color: #f8fafc !important; }
 [data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.1) !important; }
-[data-testid="stSidebar"] .stTextInput > div {
-    background: #1e293b !important;
+
+/* ━━━ サイドバー 入力フォーム全種（text / number / date / select）━━━━━━━━━━━ */
+
+/* ─ input 要素本体（text / number / date） ─ */
+[data-testid="stSidebar"] input {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
     border-radius: 8px !important;
 }
-[data-testid="stSidebar"] .stTextInput input {
-    background: transparent !important;
-    border: 1px solid rgba(255,255,255,0.2) !important;
-    color: #f1f5f9 !important;
+[data-testid="stSidebar"] input::placeholder {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+    opacity: 1 !important;
+}
+
+/* ─ Streamlit が input を包む div コンテナ ─ */
+[data-testid="stSidebar"] .stTextInput > div,
+[data-testid="stSidebar"] .stTextInput > div > div,
+[data-testid="stSidebar"] .stNumberInput > div,
+[data-testid="stSidebar"] .stNumberInput > div > div,
+[data-testid="stSidebar"] .stDateInput > div,
+[data-testid="stSidebar"] .stDateInput > div > div {
+    background-color: #ffffff !important;
     border-radius: 8px !important;
 }
-[data-testid="stSidebar"] .stTextInput input::placeholder {
-    color: rgba(255,255,255,0.35) !important;
+
+/* ─ selectbox（Baseweb コンポーネント）外枠・内部テキスト ─ */
+[data-testid="stSidebar"] [data-baseweb="select"],
+[data-testid="stSidebar"] [data-baseweb="select"] > div,
+[data-testid="stSidebar"] [data-baseweb="select"] > div > div {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    border-radius: 8px !important;
 }
+[data-testid="stSidebar"] [data-baseweb="select"] span,
+[data-testid="stSidebar"] [data-baseweb="select"] input,
+[data-testid="stSidebar"] [data-baseweb="select"] [class*="placeholder"] {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+/* ─ multiselect ─ */
+[data-testid="stSidebar"] [data-baseweb="multi-select"],
+[data-testid="stSidebar"] [data-baseweb="multi-select"] > div {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    border-radius: 8px !important;
+}
+[data-testid="stSidebar"] [data-baseweb="tag"] {
+    background-color: #e2e8f0 !important;
+}
+[data-testid="stSidebar"] [data-baseweb="tag"] span {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+/* ─ textarea ─ */
+[data-testid="stSidebar"] textarea {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+}
+
+/* ─ checkbox ─ */
 [data-testid="stSidebar"] .stCheckbox span { color: #94a3b8 !important; }
 
 /* ━━━ メインコンテンツ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
