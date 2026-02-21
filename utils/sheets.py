@@ -50,7 +50,10 @@ def _get_sheet() -> gspread.Worksheet:
         spreadsheet = client.open_by_key(SPREADSHEET_ID)
         return spreadsheet.worksheet(SHEET_NAME)
     except FileNotFoundError:
-        st.error("❌ `credentials.json` が見つかりません。ファイルを配置するか Secrets を設定してください。")
+        if "gcp_service_account" not in st.secrets:
+            st.error("❌ Streamlit の Secrets に `[gcp_service_account]` が見つかりません。Secrets が正しく保存されているか確認してください。")
+        else:
+            st.error("❌ `credentials.json` が見つかりません。ファイルを配置するか Secrets を設定してください。")
         st.stop()
     except gspread.exceptions.SpreadsheetNotFound:
         st.error("❌ スプレッドシートが見つかりません。IDを確認してください。")
