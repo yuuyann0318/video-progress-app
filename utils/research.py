@@ -24,6 +24,7 @@ from utils.config import (
     SPREADSHEET_ID, CREDENTIALS_PATH, SCOPES,
     RESEARCH_SHEET_NAME, RESEARCH_HEADERS,
 )
+from utils.sheets import _get_credentials
 
 
 # ─── 接続 ─────────────────────────────────────────────────────────────────────
@@ -31,7 +32,7 @@ from utils.config import (
 @st.cache_resource(show_spinner="📡 リサーチシートに接続中...")
 def _get_research_sheet() -> gspread.Worksheet:
     try:
-        creds = Credentials.from_service_account_file(CREDENTIALS_PATH, scopes=SCOPES)
+        creds = _get_credentials()
         client = gspread.authorize(creds)
         spreadsheet = client.open_by_key(SPREADSHEET_ID)
         try:

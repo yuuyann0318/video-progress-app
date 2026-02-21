@@ -24,6 +24,7 @@ from utils.config import (
     SPREADSHEET_ID, CREDENTIALS_PATH, SCOPES,
     REEL_SHEET_NAME, REEL_HEADERS, REEL_ANALYTICS_COLS,
 )
+from utils.sheets import _get_credentials
 
 
 # ─── 接続 ─────────────────────────────────────────────────────────────────────
@@ -31,7 +32,7 @@ from utils.config import (
 @st.cache_resource(show_spinner="📡 リールシートに接続中...")
 def _get_reel_sheet() -> gspread.Worksheet:
     try:
-        creds = Credentials.from_service_account_file(CREDENTIALS_PATH, scopes=SCOPES)
+        creds = _get_credentials()
         client = gspread.authorize(creds)
         spreadsheet = client.open_by_key(SPREADSHEET_ID)
         try:
