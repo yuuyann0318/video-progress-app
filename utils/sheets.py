@@ -19,6 +19,8 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 import uuid
+import json
+import base64
 
 from utils.config import (
     SPREADSHEET_ID, SHEET_NAME, CREDENTIALS_PATH,
@@ -30,15 +32,23 @@ from utils.config import (
 
 def _get_credentials() -> Credentials:
     """
-    認証情報を取得する。
-    - Streamlit Cloud / .streamlit/secrets.toml がある場合:
-        st.secrets["gcp_service_account"] を使用
-    - ローカル開発:
-        credentials.json ファイルを使用（フォールバック）
+    認証情報を取得する。優先順位:
+    1. GOOGLE_CREDENTIALS_B64: credentials.json をBase64エンコードした1行文字列（最優先）
+    2. gcp_service_account: TOML セクション形式（旧方式）
+    3. credentials.json ファイル（ローカル開発用）
     """
+    # ── 方式1: Base64エンコード（最も確実）───────────────────────────────
+    if "GOOGLE_CREDENTIALS_B64" in st.secrets:
+        raw = base64.b64decode(st.secrets["GOOGLE_CREDENTIALS_B64"]).decode("utf-8")
+        info = json.loads(raw)
+        return Credentials.from_service_account_info(info, scopes=SCOPES)
+
+    # ── 方式2: TOMLセクション形式 ───────────────────────────────────────
     if "gcp_service_account" in st.secrets:
         info = {k: v for k, v in st.secrets["gcp_service_account"].items()}
         return Credentials.from_service_account_info(info, scopes=SCOPES)
+
+    # ── 方式3: ローカルファイル ─────────────────────────────────────────
     return Credentials.from_service_account_file(CREDENTIALS_PATH, scopes=SCOPES)
 
 
