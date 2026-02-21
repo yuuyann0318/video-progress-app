@@ -3,9 +3,6 @@ credentials.json → .streamlit/secrets.toml 自動生成スクリプト
 
 使い方:
     python3 make_secrets.py
-
-実行すると .streamlit/secrets.toml が生成されます。
-ローカル開発用です。このファイルはGitHubに上がりません（.gitignore で除外済み）。
 """
 
 import json
@@ -13,6 +10,7 @@ import os
 
 CREDS_PATH   = os.path.join(os.path.dirname(__file__), "credentials.json")
 SECRETS_PATH = os.path.join(os.path.dirname(__file__), ".streamlit", "secrets.toml")
+
 
 def main():
     if not os.path.exists(CREDS_PATH):
@@ -26,18 +24,27 @@ def main():
 
     lines = ["[gcp_service_account]"]
     for key, val in creds.items():
-        if isinstance(val, str):
-            # private_key の改行を \\n に変換
-            escaped = val.replace("\\n", "\n").replace("\n", "\\n")
-            lines.append(f'{key} = "{escaped}"')
+        if key == "private_key":
+            # private_key はトリプルクォートで囲む（改行をそのまま扱える）
+            # 前後の改行を trim してから triple-quote で包む
+            lines.append(key + ' = """' + val + '"""')
+        elif isinstance(val, str):
+            # 通常の文字列: ダブルクォートをエスケープ
+            escaped = val.replace("\\", "\\\\").replace('"', '\\"')
+            lines.append(key + ' = "' + escaped + '"')
         else:
-            lines.append(f'{key} = "{val}"')
+            lines.append(key + ' = "' + str(val) + '"')
+
+    content = "\n".join(lines) + "\n"
 
     with open(SECRETS_PATH, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+        f.write(content)
 
-    print(f"✅ {SECRETS_PATH} を生成しました！")
-    print("   これで st.secrets['gcp_service_account'] から認証情報を読めます。")
+    print("✅ .streamlit/secrets.toml を生成しました！\n")
+    print("── 以下をStreamlit CloudのSecretsにコピーしてください ──\n")
+    print(content)
+    print("────────────────────────────────────────────────────────")
+
 
 if __name__ == "__main__":
     main()
