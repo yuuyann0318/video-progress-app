@@ -1,0 +1,29 @@
+# ━━━ 絶対にGitHubに上げてはいけないファイル ━━━━━━━━━━━━━━━━━━━
+credentials.json
+.env
+.streamlit/secrets.toml
+
+# ━━━ Python ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ━━━ 仮想環境 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+venv/
+.venv/
+env/
+.env/
+
+# ━━━ エディタ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
