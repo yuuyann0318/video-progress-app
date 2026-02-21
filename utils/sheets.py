@@ -36,12 +36,9 @@ def _get_credentials() -> Credentials:
     - ローカル開発:
         credentials.json ファイルを使用（フォールバック）
     """
-    try:
-        if "gcp_service_account" in st.secrets:
-            info = {k: v for k, v in st.secrets["gcp_service_account"].items()}
-            return Credentials.from_service_account_info(info, scopes=SCOPES)
-    except Exception:
-        pass
+    if "gcp_service_account" in st.secrets:
+        info = {k: v for k, v in st.secrets["gcp_service_account"].items()}
+        return Credentials.from_service_account_info(info, scopes=SCOPES)
     return Credentials.from_service_account_file(CREDENTIALS_PATH, scopes=SCOPES)
 
 
