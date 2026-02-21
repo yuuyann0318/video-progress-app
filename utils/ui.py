@@ -46,11 +46,18 @@ html, body, [class*="st-"] {
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3 { color: #f8fafc !important; }
 [data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.1) !important; }
-[data-testid="stSidebar"] .stTextInput input {
-    background: rgba(255,255,255,0.08) !important;
-    border-color: rgba(255,255,255,0.15) !important;
-    color: white !important;
+[data-testid="stSidebar"] .stTextInput > div {
+    background: #1e293b !important;
     border-radius: 8px !important;
+}
+[data-testid="stSidebar"] .stTextInput input {
+    background: transparent !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    color: #f1f5f9 !important;
+    border-radius: 8px !important;
+}
+[data-testid="stSidebar"] .stTextInput input::placeholder {
+    color: rgba(255,255,255,0.35) !important;
 }
 [data-testid="stSidebar"] .stCheckbox span { color: #94a3b8 !important; }
 
