@@ -207,6 +207,37 @@ def update_row(row_id: str, updates: dict) -> None:
     clear_cache()
 
 
+# ─── データ削除 ────────────────────────────────────────────────────────────────
+
+def delete_row(row_id: str) -> None:
+    """
+    ID を key に対象行を特定し、その行を削除する。
+    """
+    sheet = _get_sheet()
+    all_values = sheet.get_all_values()
+
+    if not all_values:
+        raise ValueError("シートにデータがありません")
+
+    header_row = all_values[0]
+
+    if "ID" not in header_row:
+        raise ValueError("ヘッダーに 'ID' カラムが見つかりません")
+    id_col_idx = header_row.index("ID")
+
+    target_row_idx = None
+    for i, row in enumerate(all_values[1:], start=2):
+        if len(row) > id_col_idx and row[id_col_idx].strip() == row_id.strip():
+            target_row_idx = i
+            break
+
+    if target_row_idx is None:
+        raise ValueError(f"ID '{row_id}' の案件が見つかりません")
+
+    sheet.delete_rows(target_row_idx)
+    clear_cache()
+
+
 # ─── ヘッダー保守 ─────────────────────────────────────────────────────────────
 
 def _col_letter(n: int) -> str:

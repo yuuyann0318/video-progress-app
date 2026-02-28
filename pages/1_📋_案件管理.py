@@ -19,7 +19,7 @@ from utils.config import (
     CONTENT_TYPES, REEL_ANALYTICS_COLS,
 )
 from utils.sheets import (
-    load_data, update_row, add_row, clear_cache, ensure_headers,
+    load_data, update_row, add_row, delete_row, clear_cache, ensure_headers,
 )
 from utils.research import (
     load_research, add_research, evaluate_research, link_project,
@@ -323,6 +323,19 @@ with tab_list:
                     except Exception as e:
                         st.error(f"❌ 保存に失敗: {e}")
 
+                st.markdown("---")
+                with st.expander("🗑️ この案件を削除する"):
+                    st.warning(f"**「{title}」** をスプレッドシートから完全に削除します。この操作は元に戻せません。")
+                    confirm_delete = st.checkbox("削除することを確認しました", key=f"confirm_del_{sel_id}")
+                    if st.button("🗑️ 削除する", disabled=not confirm_delete, type="primary", key=f"do_del_{sel_id}"):
+                        try:
+                            delete_row(sel_id)
+                            st.success(f"✅「{title}」を削除しました")
+                            st.session_state["selected_id"] = None
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ 削除に失敗: {e}")
+
 
 # ════════════════════════════════════════════════════════════════════════════
 # Tab 2: 新規登録
@@ -447,39 +460,24 @@ with tab_research:
                     st.error(f"❌ 提出に失敗: {e}")
 
     with r_tab2:
-        st.markdown("### 📋 リサーチを評価・案件化する")
-
         try:
             r_df = load_research()
         except Exception:
             st.error("リサーチデータの読み込みに失敗しました")
             st.stop()
 
-        if r_df.empty:
-            st.info("提出されたリサーチはありません。")
+        pending  = r_df[r_df["評価ステータス"] == "未評価"] if not r_df.empty else pd.DataFrame()
+        approved = r_df[
+            (r_df["評価ステータス"] == "採用") &
+            (r_df["案件ID"].astype(str).str.strip().isin(["", "nan", "None"]))
+        ] if not r_df.empty else pd.DataFrame()
+
+        # ── 評価待ちキュー ────────────────────────────────────────────────────
+        if pending.empty:
+            st.success("🎉 評価待ちのリサーチはありません！")
         else:
-            eval_filter = st.selectbox(
-                "表示フィルター",
-                ["未評価のみ", "採用のみ", "すべて"],
-                key="eval_filter",
-            )
-            if eval_filter == "未評価のみ":
-                r_view = r_df[r_df["評価ステータス"] == "未評価"]
-            elif eval_filter == "採用のみ":
-                r_view = r_df[r_df["評価ステータス"] == "採用"]
-            else:
-                r_view = r_df.copy()
-
-            evaluator = st.text_input(
-                "評価者名",
-                value=my_name if my_name.strip() else "",
-                placeholder="あなたの名前",
-                key="eval_name",
-            )
-
-            st.caption(f"{len(r_view)} 件表示")
-
-            for _, r in r_view.iterrows():
+            st.caption(f"評価待ち {len(pending)} 件 — 採用 / 不採用を決めると一覧から消えます")
+            for _, r in pending.iterrows():
                 r_id    = str(r.get("リサーチID", ""))
                 r_title = str(r.get("動画タイトル", "—"))
                 r_ch    = str(r.get("チャンネル名", "—"))
@@ -487,86 +485,94 @@ with tab_research:
                 r_point = str(r.get("参考ポイント", ""))
                 r_genre = str(r.get("ジャンル", ""))
                 r_sub   = str(r.get("提出者", "—"))
-                r_eval  = str(r.get("評価ステータス", "未評価"))
-                r_proj  = str(r.get("案件ID", "") or "")
 
                 yt_id_r = extract_youtube_id(r_url)
                 thumb   = youtube_thumbnail(yt_id_r) if yt_id_r else None
 
-                with st.expander(f"{'✅ ' if r_eval=='採用' else '❌ ' if r_eval=='不採用' else '🟡 '}{r_title}　— {r_sub}"):
-                    ec1, ec2 = st.columns([1, 2])
-                    with ec1:
-                        if thumb:
-                            st.image(thumb, use_container_width=True)
-                        if r_url:
-                            st.markdown(f"[動画を開く →]({r_url})")
-                    with ec2:
-                        st.markdown(f"**チャンネル:** {r_ch}")
-                        st.markdown(f"**ジャンル:** {r_genre}")
-                        st.markdown(f"**参考ポイント:** {r_point}")
-                        st.markdown(f"**ステータス:** {r_eval}")
+                c1, c2 = st.columns([1, 3])
+                with c1:
+                    if thumb:
+                        st.image(thumb, use_container_width=True)
+                    if r_url:
+                        st.markdown(f"[動画を開く →]({r_url})")
+                with c2:
+                    st.markdown(f"**{r_title}**")
+                    st.caption(f"{r_ch}　|　{r_genre}　|　提出者: **{r_sub}**")
+                    st.markdown(r_point)
 
-                    if r_eval == "未評価":
-                        ecol1, ecol2 = st.columns(2)
-                        with ecol1:
-                            if st.button("✅ 採用", key=f"adopt_{r_id}", use_container_width=True, type="primary"):
-                                evaluate_research(r_id, "採用", evaluator, "")
+                    ba, bb, bc = st.columns([2, 4, 1])
+                    with ba:
+                        if st.button("✅ 採用", key=f"adopt_{r_id}", use_container_width=True, type="primary"):
+                            evaluate_research(r_id, "採用", my_name or "管理者", "")
+                            clear_cache()
+                            st.rerun()
+                    with bb:
+                        reject_comment = st.text_input(
+                            "不採用コメント",
+                            key=f"rc_{r_id}",
+                            label_visibility="collapsed",
+                            placeholder="不採用理由（任意）",
+                        )
+                    with bc:
+                        if st.button("❌", key=f"reject_{r_id}", use_container_width=True):
+                            evaluate_research(r_id, "不採用", my_name or "管理者", reject_comment)
+                            clear_cache()
+                            st.rerun()
+
+                st.divider()
+
+        # ── 採用済み・案件化待ち ──────────────────────────────────────────────
+        if not approved.empty:
+            with st.expander(f"📁 採用済み・案件化待ち　{len(approved)} 件"):
+                for _, r in approved.iterrows():
+                    r_id    = str(r.get("リサーチID", ""))
+                    r_title = str(r.get("動画タイトル", "—"))
+                    r_sub   = str(r.get("提出者", "—"))
+
+                    st.markdown(f"**{r_title}**　（提出者: {r_sub}）")
+                    with st.form(f"proj_{r_id}"):
+                        p1, p2 = st.columns(2)
+                        with p1:
+                            p_mgmt   = st.text_input("管理番号 *", key=f"pmgmt_{r_id}")
+                            p_writer = st.text_input("担当台本作家", value=r_sub, key=f"pwrt_{r_id}")
+                        with p2:
+                            p_name   = st.text_input("案件名 *", value=r_title, key=f"pname_{r_id}")
+                            p_editor = st.text_input("担当編集者", key=f"pedt_{r_id}")
+                        p3, p4 = st.columns(2)
+                        with p3:
+                            p_due    = st.date_input("納期", key=f"pdue_{r_id}")
+                        with p4:
+                            p_status = st.selectbox(
+                                "初期ステータス", STATUSES,
+                                format_func=lambda s: STATUS_EMOJI.get(s, "") + " " + s,
+                                key=f"pstat_{r_id}",
+                            )
+                        p_ok = st.form_submit_button("📁 案件化する", type="primary")
+
+                    if p_ok:
+                        if not p_mgmt.strip() or not p_name.strip():
+                            st.error("管理番号と案件名は必須です")
+                        else:
+                            try:
+                                add_row({
+                                    "管理番号":    p_mgmt,
+                                    "案件名":      p_name,
+                                    "ステータス":  p_status,
+                                    "担当台本作家": p_writer,
+                                    "担当編集者":  p_editor,
+                                    "納期":        str(p_due) if p_due else "",
+                                })
+                                new_df = load_data()
+                                match  = new_df[new_df["管理番号"] == p_mgmt]
+                                if not match.empty:
+                                    link_project(r_id, match.iloc[0]["ID"])
+                                st.success(f"✅「{p_name}」を案件化しました！")
                                 clear_cache()
                                 st.rerun()
-                        with ecol2:
-                            reject_comment = st.text_input("不採用コメント（任意）", key=f"rc_{r_id}")
-                            if st.button("❌ 不採用", key=f"reject_{r_id}", use_container_width=True):
-                                evaluate_research(r_id, "不採用", evaluator, reject_comment)
-                                clear_cache()
-                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ 案件化に失敗: {e}")
 
-                    elif r_eval == "採用" and not r_proj:
-                        st.markdown("---")
-                        st.markdown("**📁 案件化する**")
-                        with st.form(f"proj_{r_id}"):
-                            p1, p2 = st.columns(2)
-                            with p1:
-                                p_mgmt   = st.text_input("管理番号 *", key=f"pmgmt_{r_id}")
-                                p_writer = st.text_input("担当台本作家", value=r_sub, key=f"pwrt_{r_id}")
-                            with p2:
-                                p_name   = st.text_input("案件名 *", value=r_title, key=f"pname_{r_id}")
-                                p_editor = st.text_input("担当編集者", key=f"pedt_{r_id}")
-                            p3, p4 = st.columns(2)
-                            with p3:
-                                p_due    = st.date_input("納期", key=f"pdue_{r_id}")
-                            with p4:
-                                p_status = st.selectbox(
-                                    "初期ステータス", STATUSES,
-                                    format_func=lambda s: STATUS_EMOJI.get(s, "") + " " + s,
-                                    key=f"pstat_{r_id}",
-                                )
-                            p_ok = st.form_submit_button("📁 案件化する", type="primary")
-
-                        if p_ok:
-                            if not p_mgmt.strip() or not p_name.strip():
-                                st.error("管理番号と案件名は必須です")
-                            else:
-                                try:
-                                    add_row({
-                                        "管理番号":    p_mgmt,
-                                        "案件名":      p_name,
-                                        "ステータス":  p_status,
-                                        "担当台本作家": p_writer,
-                                        "担当編集者":  p_editor,
-                                        "納期":        str(p_due) if p_due else "",
-                                    })
-                                    new_df = load_data()
-                                    match  = new_df[new_df["管理番号"] == p_mgmt]
-                                    if not match.empty:
-                                        link_project(r_id, match.iloc[0]["ID"])
-                                    st.success(f"✅「{p_name}」を案件化しました！")
-                                    clear_cache()
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"❌ 案件化に失敗: {e}")
-
-                    elif r_eval == "採用" and r_proj:
-                        st.success(f"✅ 案件化済み（案件ID: {r_proj}）")
+                    st.divider()
 
 
 # ════════════════════════════════════════════════════════════════════════════
