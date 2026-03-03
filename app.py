@@ -11,6 +11,7 @@ from datetime import date
 
 from utils.sheets import clear_cache, ensure_headers, load_data
 from utils.ui import inject_css, render_kanban_board, render_pipeline_bar
+from utils.auth import render_auth_sidebar
 
 st.set_page_config(
     page_title="動画制作管理",
@@ -36,6 +37,7 @@ with st.sidebar:
     if st.button("🔄 データ更新", use_container_width=True):
         clear_cache()
         st.rerun()
+    render_auth_sidebar()
 
 # ── フィルター適用 ────────────────────────────────────────────────────────────
 filtered = df.copy()

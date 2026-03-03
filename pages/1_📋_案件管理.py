@@ -30,6 +30,7 @@ from utils.ui import (
     inject_css, render_project_cards, status_badge_html, days_label,
     reel_status_badge_html, platform_badge_html, paginate,
 )
+from utils.auth import render_auth_sidebar, is_authenticated
 
 st.set_page_config(page_title="案件管理", page_icon="📋", layout="wide")
 inject_css()
@@ -83,8 +84,10 @@ with st.sidebar:
         clear_cache()
         clear_reel_cache()
         st.rerun()
+    render_auth_sidebar()
 
 # ── データ取得 ───────────────────────────────────────────────────────────────
+is_editor = is_authenticated()
 df = load_data()
 today_ts = pd.Timestamp(date.today())
 week_end = today_ts + pd.Timedelta(days=7)
@@ -164,6 +167,10 @@ def _int_val(r, col):
     except Exception:
         return 0
 
+
+# ── 認証バナー ────────────────────────────────────────────────────────────────
+if not is_editor:
+    st.info("🔒 閲覧専用モード — 編集・追加するにはサイドバーからログインしてください")
 
 # ── タブ ─────────────────────────────────────────────────────────────────────
 tab_list, tab_new, tab_research, tab_reel, tab_submission = st.tabs([
@@ -292,7 +299,9 @@ with tab_list:
 
                     submitted = st.form_submit_button("💾 保存", use_container_width=True, type="primary")
 
-                if submitted:
+                if submitted and not is_editor:
+                    st.error("🔒 保存するにはサイドバーからログインしてください")
+                if submitted and is_editor:
                     auto_status = new_status
                     old_script_url = str(row.get("台本URL", "") or "")
                     old_final_url  = str(row.get("完パケ動画URL", "") or "")
@@ -346,17 +355,18 @@ with tab_list:
                     )
                     st.markdown("---")
 
-                with st.expander("🗑️ この案件を削除する"):
-                    st.warning(f"**「{title}」** をスプレッドシートから完全に削除します。この操作は元に戻せません。")
-                    confirm_delete = st.checkbox("削除することを確認しました", key=f"confirm_del_{sel_id}")
-                    if st.button("🗑️ 削除する", disabled=not confirm_delete, type="primary", key=f"do_del_{sel_id}"):
-                        try:
-                            delete_row(sel_id)
-                            st.success(f"✅「{title}」を削除しました")
-                            st.session_state["selected_id"] = None
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ 削除に失敗: {e}")
+                if is_editor:
+                    with st.expander("🗑️ この案件を削除する"):
+                        st.warning(f"**「{title}」** をスプレッドシートから完全に削除します。この操作は元に戻せません。")
+                        confirm_delete = st.checkbox("削除することを確認しました", key=f"confirm_del_{sel_id}")
+                        if st.button("🗑️ 削除する", disabled=not confirm_delete, type="primary", key=f"do_del_{sel_id}"):
+                            try:
+                                delete_row(sel_id)
+                                st.success(f"✅「{title}」を削除しました")
+                                st.session_state["selected_id"] = None
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ 削除に失敗: {e}")
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -399,7 +409,9 @@ with tab_new:
         reg = st.form_submit_button("📝 登録する", use_container_width=True, type="primary")
 
     if reg:
-        if not n_name.strip():
+        if not is_editor:
+            st.error("🔒 登録するにはサイドバーからログインしてください")
+        elif not n_name.strip():
             st.error("案件名は必須です")
         else:
             try:
@@ -462,7 +474,9 @@ with tab_research:
             r_submit = st.form_submit_button("📤 提出する", use_container_width=True, type="primary")
 
         if r_submit:
-            if not r_title.strip() or not r_url.strip() or not r_point.strip() or not r_submitter.strip():
+            if not is_editor:
+                st.error("🔒 提出するにはサイドバーからログインしてください")
+            elif not r_title.strip() or not r_url.strip() or not r_point.strip() or not r_submitter.strip():
                 st.error("タイトル・URL・参考ポイント・提出者名は必須です")
             else:
                 try:
@@ -525,9 +539,12 @@ with tab_research:
                     ba, bb, bc = st.columns([2, 4, 1])
                     with ba:
                         if st.button("✅ 採用", key=f"adopt_{r_id}", use_container_width=True, type="primary"):
-                            evaluate_research(r_id, "採用", my_name or "管理者", "")
-                            clear_cache()
-                            st.rerun()
+                            if not is_editor:
+                                st.error("🔒 評価するにはログインが必要です")
+                            else:
+                                evaluate_research(r_id, "採用", my_name or "管理者", "")
+                                clear_cache()
+                                st.rerun()
                     with bb:
                         reject_comment = st.text_input(
                             "不採用コメント",
@@ -537,9 +554,12 @@ with tab_research:
                         )
                     with bc:
                         if st.button("❌", key=f"reject_{r_id}", use_container_width=True):
-                            evaluate_research(r_id, "不採用", my_name or "管理者", reject_comment)
-                            clear_cache()
-                            st.rerun()
+                            if not is_editor:
+                                st.error("🔒 評価するにはログインが必要です")
+                            else:
+                                evaluate_research(r_id, "不採用", my_name or "管理者", reject_comment)
+                                clear_cache()
+                                st.rerun()
 
                 st.divider()
 
@@ -572,7 +592,9 @@ with tab_research:
                         p_ok = st.form_submit_button("📁 案件化する", type="primary")
 
                     if p_ok:
-                        if not p_mgmt.strip() or not p_name.strip():
+                        if not is_editor:
+                            st.error("🔒 案件化するにはサイドバーからログインしてください")
+                        elif not p_mgmt.strip() or not p_name.strip():
                             st.error("管理番号と案件名は必須です")
                         else:
                             try:
@@ -938,7 +960,9 @@ with tab_reel:
                     re_notes   = st.text_area("備考", value=str(rrow.get("備考", "") or ""))
                     btn_update = st.form_submit_button("💾 更新する", use_container_width=True, type="primary")
 
-                if btn_update:
+                if btn_update and not is_editor:
+                    st.error("🔒 更新するにはサイドバーからログインしてください")
+                if btn_update and is_editor:
                     try:
                         posted_str = re_posted.strftime("%Y/%m/%d") if re_posted else ""
                         update_reel(rrow_id, {
@@ -1021,7 +1045,9 @@ with tab_reel:
             btn_register = st.form_submit_button("📱 リールを登録する", use_container_width=True, type="primary")
 
         if btn_register:
-            if not rn_mgmt or not rn_title:
+            if not is_editor:
+                st.error("🔒 登録するにはサイドバーからログインしてください")
+            elif not rn_mgmt or not rn_title:
                 st.error("⚠️ 管理番号とタイトルは必須です。")
             else:
                 try:
@@ -1423,7 +1449,9 @@ with tab_submission:
 
                             save_btn = st.form_submit_button("💾 保存する", use_container_width=True, type="primary")
 
-                        if save_btn:
+                        if save_btn and not is_editor:
+                            st.error("🔒 保存するにはサイドバーからログインしてください")
+                        if save_btn and is_editor:
                             try:
                                 update_row(sel_id, {
                                     "台本提出期限": new_sdl.strftime("%Y/%m/%d")  if new_sdl  else "",
