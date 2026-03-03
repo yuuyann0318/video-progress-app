@@ -277,6 +277,15 @@ with tab_list:
                         placeholder="完成動画のリンク"
                     )
 
+                    st.markdown("**📄 台本テキスト**")
+                    new_script_text = st.text_area(
+                        "台本テキスト",
+                        value=str(row.get("台本テキスト", "") or ""),
+                        height=300,
+                        placeholder="ここに台本を貼り付けてください",
+                        label_visibility="collapsed",
+                    )
+
                     new_memo = st.text_area(
                         "備考", value=str(row.get("備考", "") or ""), height=80
                     )
@@ -308,6 +317,7 @@ with tab_list:
                         "動画提出日":     str(new_video_date) if new_video_date else "",
                         "素材フォルダURL": new_material_url,
                         "完パケ動画URL":  new_final_url,
+                        "台本テキスト":   new_script_text,
                         "備考":          new_memo,
                     }
 
@@ -324,6 +334,18 @@ with tab_list:
                         st.error(f"❌ 保存に失敗: {e}")
 
                 st.markdown("---")
+                script_text_val = str(row.get("台本テキスト", "") or "")
+                if script_text_val.strip():
+                    st.markdown("### 📄 台本")
+                    st.text_area(
+                        "台本ビュー",
+                        value=script_text_val,
+                        height=500,
+                        disabled=True,
+                        label_visibility="collapsed",
+                    )
+                    st.markdown("---")
+
                 with st.expander("🗑️ この案件を削除する"):
                     st.warning(f"**「{title}」** をスプレッドシートから完全に削除します。この操作は元に戻せません。")
                     confirm_delete = st.checkbox("削除することを確認しました", key=f"confirm_del_{sel_id}")

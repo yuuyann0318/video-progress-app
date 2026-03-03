@@ -1,8 +1,26 @@
 import os
+import streamlit as st
 
 # ─── Google Sheets 設定 ─────────────────────────────────────────────────────────
-SPREADSHEET_ID = "1RlV-mj83pKmeOe4DkfpllAJxvs6g0R7VUPMPZXAOzoU"
-SHEET_NAME = "VideoProjects"
+# Secretsに SPREADSHEET_ID があればそれを使う。なければハードコード値をフォールバック
+def _get_spreadsheet_id() -> str:
+    try:
+        return st.secrets["SPREADSHEET_ID"]
+    except Exception:
+        return "1RlV-mj83pKmeOe4DkfpllAJxvs6g0R7VUPMPZXAOzoU"
+
+SPREADSHEET_ID = _get_spreadsheet_id()
+
+# Secretsに SHEET_PREFIX があればシート名の先頭に付ける
+# 例: SHEET_PREFIX = "A社_" → "A社_VideoProjects", "A社_ResearchItems", "A社_ReelPosts"
+def _sheet(base: str) -> str:
+    try:
+        prefix = st.secrets.get("SHEET_PREFIX", "")
+        return f"{prefix}{base}" if prefix else base
+    except Exception:
+        return base
+
+SHEET_NAME = _sheet("VideoProjects")
 CREDENTIALS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "credentials.json")
 
 SCOPES = [
@@ -17,7 +35,7 @@ HEADERS = [
     "台本提出期限", "台本提出日",
     "動画提出期限", "動画提出日",
     "台本URL", "素材フォルダURL", "完パケ動画URL",
-    "備考", "最終更新日時",
+    "台本テキスト", "備考", "最終更新日時",
 ]
 
 # ─── ステータス定義 ────────────────────────────────────────────────────────────
@@ -76,7 +94,7 @@ STATUS_TEXT_COLOR = {
 PAGE_SIZE = 20
 
 # ─── リサーチ機能 ──────────────────────────────────────────────────────────────
-RESEARCH_SHEET_NAME = "ResearchItems"
+RESEARCH_SHEET_NAME = _sheet("ResearchItems")
 
 RESEARCH_HEADERS = [
     "リサーチID", "提出日時", "提出者",
@@ -114,7 +132,7 @@ RESEARCH_GENRES = [
 # ▼ インスタリール / SNS投稿管理
 # ─────────────────────────────────────────────────────────────────────────────
 
-REEL_SHEET_NAME = "ReelPosts"
+REEL_SHEET_NAME = _sheet("ReelPosts")
 
 REEL_HEADERS = [
     "管理番号", "ID", "タイトル", "ステータス",
