@@ -58,7 +58,11 @@ def _get_sheet() -> gspread.Worksheet:
         creds = _get_credentials()
         client = gspread.authorize(creds)
         spreadsheet = client.open_by_key(SPREADSHEET_ID)
-        return spreadsheet.worksheet(SHEET_NAME)
+        try:
+            return spreadsheet.worksheet(SHEET_NAME)
+        except gspread.exceptions.WorksheetNotFound:
+            ws = spreadsheet.add_worksheet(title=SHEET_NAME, rows=1000, cols=50)
+            return ws
     except FileNotFoundError:
         if "gcp_service_account" not in st.secrets:
             st.error("❌ Streamlit の Secrets に `[gcp_service_account]` が見つかりません。Secrets が正しく保存されているか確認してください。")
